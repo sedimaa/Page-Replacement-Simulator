@@ -7,6 +7,7 @@ const clearButton = document.querySelector("#clear-button");
 const message = document.querySelector("#message");
 const tableHead = document.querySelector("#table-head");
 const tableBody = document.querySelector("#table-body");
+const comparisonGrid = document.querySelector("#comparison-grid");
 
 const faultCount = document.querySelector("#fault-count");
 const hitCount = document.querySelector("#hit-count");
@@ -160,6 +161,57 @@ function renderSummary(result, algorithm) {
     algorithmLabel.textContent = algorithm;
 }
 
+function renderComparison({ references, frames }) {
+    const algorithms = ["FIFO", "Optimal", "LRU"];
+    const results = algorithms.map((algorithm) => ({
+        algorithm,
+        result: simulate({ references, frames, algorithm })
+    }));
+
+    const maxFaults = Math.max(...results.map((item) => item.result.faults), 1);
+    const maxHits = Math.max(...results.map((item) => item.result.hits), 1);
+
+    comparisonGrid.innerHTML = "";
+
+    results.forEach(({ algorithm, result }) => {
+        const card = document.createElement("div");
+        card.className = "comparison-card";
+
+        const title = document.createElement("h3");
+        title.textContent = algorithm;
+        card.appendChild(title);
+
+        const faultRow = document.createElement("div");
+        faultRow.className = "metric-row";
+        faultRow.innerHTML = `
+            <span>Faults</span>
+            <span class="bar-outer"><span class="bar-fill fault" style="width: ${Math.round((result.faults / maxFaults) * 100)}%;"></span></span>
+            <strong>${result.faults}</strong>
+        `;
+        card.appendChild(faultRow);
+
+        const hitRow = document.createElement("div");
+        hitRow.className = "metric-row";
+        hitRow.innerHTML = `
+            <span>Hits</span>
+            <span class="bar-outer"><span class="bar-fill hit" style="width: ${Math.round((result.hits / maxHits) * 100)}%;"></span></span>
+            <strong>${result.hits}</strong>
+        `;
+        card.appendChild(hitRow);
+
+        const ratioRow = document.createElement("div");
+        ratioRow.className = "metric-row";
+        ratioRow.innerHTML = `
+            <span>Hit Ratio</span>
+            <span class="bar-outer"><span class="bar-fill ratio" style="width: ${(result.ratio * 100).toFixed(0)}%;"></span></span>
+            <strong>${(result.ratio * 100).toFixed(1)}%</strong>
+        `;
+        card.appendChild(ratioRow);
+
+        comparisonGrid.appendChild(card);
+    });
+}
+
 function renderTable(result, frameCount) {
     tableHead.innerHTML = "";
     tableBody.innerHTML = "";
@@ -212,6 +264,7 @@ function runSimulation() {
         const input = validateInputs();
         const result = simulate(input);
         renderSummary(result, input.algorithm);
+        renderComparison(input);
         renderTable(result, input.frames);
         setMessage("");
     } catch (error) {
@@ -241,6 +294,7 @@ clearButton.addEventListener("click", () => {
     referenceInput.value = "";
     tableHead.innerHTML = "";
     tableBody.innerHTML = '<tr><td class="empty-state">Run a simulation to see each reference and frame snapshot.</td></tr>';
+    comparisonGrid.innerHTML = '<div class="comparison-empty">Run a simulation to compare all three algorithms.</div>';
     renderSummary({ faults: 0, hits: 0, ratio: 0 }, algorithmInput.value);
     setMessage("");
 });
